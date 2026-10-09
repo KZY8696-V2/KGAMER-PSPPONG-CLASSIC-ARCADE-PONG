@@ -1,0 +1,23 @@
+name: Build PSP Pong
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: pspdev/pspdev:latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build project
+        run: |
+          make
+
+      - name: Upload EBOOT.PBP
+        uses: actions/upload-artifact@v4
+        with:
+          name: KGAMER-Pong-EBOOT
+          path: EBOOT.PBP
