@@ -58,7 +58,7 @@ int diff_selection = 0;
 
 int player_score = 0;
 int ai_score = 0;
-int score_limit = 5; // Anlık oyun skor sınırı
+int score_limit = 5;
 
 // Ball & Paddles
 float ball_x = 240.0f, ball_y = 136.0f;
@@ -71,7 +71,8 @@ float ai_y = 100.0f;
 float paddle_height = 50.0f;
 float ai_speed = 2.0f;
 
-int exit_callback(int arg1, int arg2, int exit_code) {
+// Düzeltildi: SceKernelCallbackFunction prototip uyumu için 3. parametre void *arg
+int exit_callback(int arg1, int arg2, void *arg) {
     sceKernelExitGame();
     return 0;
 }
@@ -126,29 +127,29 @@ void apply_difficulty() {
             ball_dx = 1.5f; ball_dy = 1.5f;
             ai_speed = 0.8f; 
             ball_accelerates = 0; 
-            score_limit = 3; // Ultra Easy için skor sınırı: 3
+            score_limit = 3;
             break;
         case DIFF_EASY:
             ball_dx = 2.0f; ball_dy = 2.0f;
             ai_speed = 1.5f;
             ball_accelerates = 0; 
-            score_limit = 5; // Easy için skor sınırı: 5
+            score_limit = 5;
             break;
         case DIFF_MEDIUM:
             ball_dx = 2.5f; ball_dy = 2.5f;
             ai_speed = 2.2f;
             ball_accelerates = 1;
-            score_limit = 7; // Medium için skor sınırı: 7
+            score_limit = 7;
             break;
         case DIFF_HARD:
             ball_dx = 3.5f; ball_dy = 3.5f;
             ai_speed = 3.5f; 
             ball_accelerates = 1; 
-            score_limit = 10; // Hard için skor sınırı: 10
+            score_limit = 10;
             break;
         case DIFF_CUSTOM:
             ball_speed_multiplier = ms_data.custom_saved_speed;
-            score_limit = ms_data.custom_saved_limit; // Custom için sabitlenen skor sınırı
+            score_limit = ms_data.custom_saved_limit;
             ai_speed = ms_data.custom_saved_ai;
             ball_dx = 3.0f * ball_speed_multiplier;
             ball_dy = 3.0f * ball_speed_multiplier;
@@ -317,14 +318,15 @@ int main(void) {
         sceGuClearDepth(0xFFFF);
         sceGuClear(GU_COLOR_BUFFER_BIT | GU_DEPTH_BUFFER_BIT);
 
-        sceGumMatrixMode(GU_M_PROJECTION);
+        // Düzeltildi: GU_M_PROJECTION yerine GU_PROJECTION vb. kullanıldı
+        sceGumMatrixMode(GU_PROJECTION);
         sceGumLoadIdentity();
         sceGumOrtho(0.0f, 480.0f, 272.0f, 0.0f, -1.0f, 1.0f);
 
-        sceGumMatrixMode(GU_M_VIEW);
+        sceGumMatrixMode(GU_VIEW);
         sceGumLoadIdentity();
 
-        sceGumMatrixMode(GU_M_MODEL);
+        sceGumMatrixMode(GU_MODEL);
         sceGumLoadIdentity();
 
         if (current_state == STATE_MENU) {
