@@ -2,15 +2,10 @@
 #include <pspdebug.h>
 #include <pspdisplay.h>
 #include <pspctrl.h>
-#include <pspgu.h>
-#include <pspgum.h>
-#include <math.h>
 #include <string.h>
 
 PSP_MODULE_INFO("KGAMER Pong MemoryStick", 0, 1, 0);
-PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER | THREAD_ATTR_VFPU);
-
-static unsigned int __attribute__((aligned(16))) list[262144];
+PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER);
 
 // Game States
 typedef enum {
@@ -61,17 +56,17 @@ int ai_score = 0;
 int score_limit = 5;
 
 // Ball & Paddles
-float ball_x = 240.0f, ball_y = 136.0f;
-float ball_dx = 2.0f, ball_dy = 2.0f;
+float ball_x = 30.0f, ball_y = 10.0f;
+float ball_dx = 1.0f, ball_dy = 1.0f;
 float ball_speed_multiplier = 1.0f;
 int ball_accelerates = 0;
 
-float player_y = 100.0f;
-float ai_y = 100.0f;
-float paddle_height = 50.0f;
-float ai_speed = 2.0f;
+float player_y = 10.0f;
+float ai_y = 10.0f;
+float paddle_height = 5.0f;
+float ai_speed = 1.0f;
 
-// Düzeltildi: SceKernelCallbackFunction prototip uyumu için 3. parametre void *arg
+// Callback
 int exit_callback(int arg1, int arg2, void *arg) {
     sceKernelExitGame();
     return 0;
@@ -117,42 +112,42 @@ void save_to_memory_stick(int player_won, Difficulty diff) {
 }
 
 void apply_difficulty() {
-    ball_x = 240.0f;
-    ball_y = 136.0f;
+    ball_x = 30.0f;
+    ball_y = 10.0f;
     player_score = 0;
     ai_score = 0;
 
     switch (current_diff) {
         case DIFF_ULTRA_EASY:
-            ball_dx = 1.5f; ball_dy = 1.5f;
-            ai_speed = 0.8f; 
+            ball_dx = 1.0f; ball_dy = 1.0f;
+            ai_speed = 0.5f; 
             ball_accelerates = 0; 
-            score_limit = 3;
+            score_limit = 3; // Ultra Easy skor sınırı: 3
             break;
         case DIFF_EASY:
-            ball_dx = 2.0f; ball_dy = 2.0f;
-            ai_speed = 1.5f;
+            ball_dx = 1.5f; ball_dy = 1.5f;
+            ai_speed = 1.0f;
             ball_accelerates = 0; 
-            score_limit = 5;
+            score_limit = 5; // Easy skor sınırı: 5
             break;
         case DIFF_MEDIUM:
-            ball_dx = 2.5f; ball_dy = 2.5f;
-            ai_speed = 2.2f;
+            ball_dx = 2.0f; ball_dy = 2.0f;
+            ai_speed = 1.5f;
             ball_accelerates = 1;
-            score_limit = 7;
+            score_limit = 7; // Medium skor sınırı: 7
             break;
         case DIFF_HARD:
-            ball_dx = 3.5f; ball_dy = 3.5f;
-            ai_speed = 3.5f; 
+            ball_dx = 2.5f; ball_dy = 2.5f;
+            ai_speed = 2.2f; 
             ball_accelerates = 1; 
-            score_limit = 10;
+            score_limit = 10; // Hard skor sınırı: 10
             break;
         case DIFF_CUSTOM:
             ball_speed_multiplier = ms_data.custom_saved_speed;
             score_limit = ms_data.custom_saved_limit;
             ai_speed = ms_data.custom_saved_ai;
-            ball_dx = 3.0f * ball_speed_multiplier;
-            ball_dy = 3.0f * ball_speed_multiplier;
+            ball_dx = 2.0f * ball_speed_multiplier;
+            ball_dy = 2.0f * ball_speed_multiplier;
             ball_accelerates = 1;
             break;
     }
@@ -161,19 +156,7 @@ void apply_difficulty() {
 int main(void) {
     setup_callbacks();
     load_from_memory_stick();
-
-    sceGuInit();
-    sceGuStart(GU_DIRECT, list);
-    sceGuDrawBuffer(GU_PSM_8888, (void*)0, 512);
-    sceGuDispBuffer(480, 272, (void*)0x00088000, 512);
-    sceGuDepthBuffer((void*)0x00110000, 512);
-    sceGuEnable(GU_DEPTH_TEST);
-    sceGuDepthFunc(GU_LEQUAL);
-    sceGuFinish();
-    sceGuSync(0, 0);
-
-    sceDisplayWaitVblankStart();
-    sceGuDisplay(GU_TRUE);
+    pspDebugScreenInit();
 
     SceCtrlData pad, old_pad;
     sceCtrlSetSamplingCycle(0);
@@ -224,7 +207,7 @@ int main(void) {
             }
             if (just_triangle) current_state = STATE_MENU;
         }
-        // --- CUSTOM CONFIG & FIXING VALUES ---
+        // --- CUSTOM CONFIG ---
         else if (current_state == STATE_CUSTOM_CONFIG) {
             if ((pad.Buttons & PSP_CTRL_RIGHT) && !(old_pad.Buttons & PSP_CTRL_RIGHT)) {
                 ms_data.custom_saved_limit += 1;
@@ -242,7 +225,7 @@ int main(void) {
             }
             if (just_triangle) current_state = STATE_DIFFICULTY;
         }
-        // --- MEMORY STICK STATS SCREEN ---
+        // --- STATS SCREEN ---
         else if (current_state == STATE_STATS) {
             if (just_triangle || just_cross) {
                 current_state = STATE_MENU;
@@ -250,46 +233,46 @@ int main(void) {
         }
         // --- PLAYING ---
         else if (current_state == STATE_PLAYING) {
-            if (pad.Buttons & PSP_CTRL_UP || pad.Ly < 100) player_y -= 3.5f;
-            if (pad.Buttons & PSP_CTRL_DOWN || pad.Ly > 150) player_y += 3.5f;
+            if (pad.Buttons & PSP_CTRL_UP || pad.Ly < 100) player_y -= 1.0f;
+            if (pad.Buttons & PSP_CTRL_DOWN || pad.Ly > 150) player_y += 1.0f;
 
-            if (player_y < 10.0f) player_y = 10.0f;
-            if (player_y > 272 - 10 - paddle_height) player_y = 272 - 10 - paddle_height;
+            if (player_y < 2.0f) player_y = 2.0f;
+            if (player_y > 30.0f - paddle_height) player_y = 30.0f - paddle_height;
 
             // AI Movement
             if (ai_y + (paddle_height / 2) < ball_y) ai_y += ai_speed;
             if (ai_y + (paddle_height / 2) > ball_y) ai_y -= ai_speed;
 
-            if (ai_y < 10.0f) ai_y = 10.0f;
-            if (ai_y > 272 - 10 - paddle_height) ai_y = 272 - 10 - paddle_height;
+            if (ai_y < 2.0f) ai_y = 2.0f;
+            if (ai_y > 30.0f - paddle_height) ai_y = 30.0f - paddle_height;
 
             // Ball Physics
             ball_x += ball_dx;
             ball_y += ball_dy;
 
-            if (ball_y <= 10.0f || ball_y >= 262.0f) {
+            if (ball_y <= 2.0f || ball_y >= 32.0f) {
                 ball_dy = -ball_dy;
             }
 
             // Collisions
-            if (ball_x <= 30.0f && ball_x >= 20.0f && ball_y >= player_y && ball_y <= player_y + paddle_height) {
+            if (ball_x <= 4.0f && ball_y >= player_y && ball_y <= player_y + paddle_height) {
                 ball_dx = -ball_dx;
                 if (ball_accelerates) ball_dx *= 1.05f;
             }
 
-            if (ball_x >= 450.0f && ball_x <= 460.0f && ball_y >= ai_y && ball_y <= ai_y + paddle_height) {
+            if (ball_x >= 56.0f && ball_y >= ai_y && ball_y <= ai_y + paddle_height) {
                 ball_dx = -ball_dx;
                 if (ball_accelerates) ball_dx *= 1.05f;
             }
 
             if (ball_x < 0) {
                 ai_score++;
-                ball_x = 240.0f; ball_y = 136.0f;
+                ball_x = 30.0f; ball_y = 15.0f;
                 apply_difficulty();
             }
-            if (ball_x > 480) {
+            if (ball_x > 60) {
                 player_score++;
-                ball_x = 240.0f; ball_y = 136.0f;
+                ball_x = 30.0f; ball_y = 15.0f;
                 apply_difficulty();
             }
 
@@ -312,135 +295,83 @@ int main(void) {
 
         old_pad = pad;
 
-        // --- RENDERING ---
-        sceGuStart(GU_DIRECT, list);
-        sceGuClearColor(0xFF000000);
-        sceGuClearDepth(0xFFFF);
-        sceGuClear(GU_COLOR_BUFFER_BIT | GU_DEPTH_BUFFER_BIT);
-
-        // Düzeltildi: GU_M_PROJECTION yerine GU_PROJECTION vb. kullanıldı
-        sceGumMatrixMode(GU_PROJECTION);
-        sceGumLoadIdentity();
-        sceGumOrtho(0.0f, 480.0f, 272.0f, 0.0f, -1.0f, 1.0f);
-
-        sceGumMatrixMode(GU_VIEW);
-        sceGumLoadIdentity();
-
-        sceGumMatrixMode(GU_MODEL);
-        sceGumLoadIdentity();
+        // --- RENDERING (Saf pspDebugScreen ile Siyah Ekran Sorunu Olmaksızın) ---
+        pspDebugScreenClear();
+        pspDebugScreenSetXY(0, 0);
 
         if (current_state == STATE_MENU) {
-            pspDebugScreenSetXY(14, 3);
-            pspDebugScreenPrintf("====================================");
-            pspDebugScreenSetXY(14, 4);
-            pspDebugScreenPrintf("      CLASSIC ARCADE: PONG          ");
-            pspDebugScreenSetXY(14, 5);
-            pspDebugScreenPrintf("               [ PSP ]              ");
-            pspDebugScreenSetXY(14, 6);
-            pspDebugScreenPrintf("====================================");
+            pspDebugScreenPrintf("\n");
+            pspDebugScreenPrintf("      ====================================\n");
+            pspDebugScreenPrintf("            CLASSIC ARCADE: PONG          \n");
+            pspDebugScreenPrintf("                   [ PSP ]                \n");
+            pspDebugScreenPrintf("      ====================================\n\n");
+            pspDebugScreenPrintf("      [MS0:/scores.properties STATS]\n");
+            pspDebugScreenPrintf("      ULTRA: %dW / %dL  |  EASY: %dW / %dL\n", ms_data.wins_ultra, ms_data.losses_ultra, ms_data.wins_easy, ms_data.losses_easy);
+            pspDebugScreenPrintf("      MED:   %dW / %dL  |  HARD: %dW / %dL\n", ms_data.wins_medium, ms_data.losses_medium, ms_data.wins_hard, ms_data.losses_hard);
+            pspDebugScreenPrintf("      CUSTOM (Fixed): %dW / %dL\n\n", ms_data.wins_custom, ms_data.losses_custom);
 
-            pspDebugScreenSetXY(10, 8);
-            pspDebugScreenPrintf("[MS0:/scores.properties STATS]");
-            pspDebugScreenSetXY(10, 10);
-            pspDebugScreenPrintf("ULTRA: %dW / %dL  |  EASY: %dW / %dL", ms_data.wins_ultra, ms_data.losses_ultra, ms_data.wins_easy, ms_data.losses_easy);
-            pspDebugScreenSetXY(10, 12);
-            pspDebugScreenPrintf("MED:   %dW / %dL  |  HARD: %dW / %dL", ms_data.wins_medium, ms_data.losses_medium, ms_data.wins_hard, ms_data.losses_hard);
-            pspDebugScreenSetXY(10, 14);
-            pspDebugScreenPrintf("CUSTOM (Fixed): %dW / %dL", ms_data.wins_custom, ms_data.losses_custom);
-
-            pspDebugScreenSetXY(16, 18);
-            pspDebugScreenPrintf("%s [1] START GAME", menu_selection == 0 ? ">" : " ");
-            pspDebugScreenSetXY(16, 20);
-            pspDebugScreenPrintf("%s [2] FILE DETAILS (SCORES)", menu_selection == 1 ? ">" : " ");
-            pspDebugScreenSetXY(16, 22);
-            pspDebugScreenPrintf("%s [3] EXIT", menu_selection == 2 ? ">" : " ");
-
-            pspDebugScreenSetXY(15, 25);
-            pspDebugScreenPrintf("     2026 KGAMER - ALL RIGHTS RESERVED     ");
+            pspDebugScreenPrintf("      %s [1] START GAME\n", menu_selection == 0 ? ">" : " ");
+            pspDebugScreenPrintf("      %s [2] FILE DETAILS (SCORES)\n", menu_selection == 1 ? ">" : " ");
+            pspDebugScreenPrintf("      %s [3] EXIT\n\n", menu_selection == 2 ? ">" : " ");
+            pspDebugScreenPrintf("           2026 KGAMER - ALL RIGHTS RESERVED     \n");
         } 
         else if (current_state == STATE_DIFFICULTY) {
-            pspDebugScreenSetXY(15, 4);
-            pspDebugScreenPrintf("=== SELECT DIFFICULTY ===");
-            pspDebugScreenSetXY(15, 8);
-            pspDebugScreenPrintf("%s ULTRA EASY (Limit: 3)", diff_selection == 0 ? ">" : " ");
-            pspDebugScreenSetXY(15, 10);
-            pspDebugScreenPrintf("%s EASY (Limit: 5 / No Speedup)", diff_selection == 1 ? ">" : " ");
-            pspDebugScreenSetXY(15, 12);
-            pspDebugScreenPrintf("%s MEDIUM (Limit: 7)", diff_selection == 2 ? ">" : " ");
-            pspDebugScreenSetXY(15, 14);
-            pspDebugScreenPrintf("%s HARD (Limit: 10 / Fast)", diff_selection == 3 ? ">" : " ");
-            pspDebugScreenSetXY(15, 16);
-            pspDebugScreenPrintf("%s CUSTOM MODE (Fixed Settings)", diff_selection == 4 ? ">" : " ");
-            pspDebugScreenSetXY(15, 22);
-            pspDebugScreenPrintf("Press TRIANGLE (Y) to Return");
+            pspDebugScreenPrintf("\n      === SELECT DIFFICULTY ===\n\n");
+            pspDebugScreenPrintf("      %s ULTRA EASY (Limit: 3)\n", diff_selection == 0 ? ">" : " ");
+            pspDebugScreenPrintf("      %s EASY (Limit: 5 / No Speedup)\n", diff_selection == 1 ? ">" : " ");
+            pspDebugScreenPrintf("      %s MEDIUM (Limit: 7)\n", diff_selection == 2 ? ">" : " ");
+            pspDebugScreenPrintf("      %s HARD (Limit: 10 / Fast)\n", diff_selection == 3 ? ">" : " ");
+            pspDebugScreenPrintf("      %s CUSTOM MODE (Fixed Settings)\n\n", diff_selection == 4 ? ">" : " ");
+            pspDebugScreenPrintf("      Press TRIANGLE (Y) to Return\n");
         }
         else if (current_state == STATE_CUSTOM_CONFIG) {
-            pspDebugScreenSetXY(12, 5);
-            pspDebugScreenPrintf("=== CUSTOM MODE & FIX SETTINGS ===");
-            pspDebugScreenSetXY(10, 9);
-            pspDebugScreenPrintf("Fixed Score Limit: < %d >", ms_data.custom_saved_limit);
-            pspDebugScreenSetXY(10, 11);
-            pspDebugScreenPrintf("Fixed Speed Mult:  < %.1f >", ms_data.custom_saved_speed);
-            pspDebugScreenSetXY(10, 13);
-            pspDebugScreenPrintf("Fixed AI Power:    < %.1f >", ms_data.custom_saved_ai);
-            pspDebugScreenSetXY(10, 17);
-            pspDebugScreenPrintf("Left/Right to adjust, X to Start!");
-            pspDebugScreenSetXY(10, 21);
-            pspDebugScreenPrintf("Press Triangle to Return");
+            pspDebugScreenPrintf("\n      === CUSTOM MODE & FIX SETTINGS ===\n\n");
+            pspDebugScreenPrintf("      Fixed Score Limit: < %d >\n", ms_data.custom_saved_limit);
+            pspDebugScreenPrintf("      Fixed Speed Mult:  < %.1f >\n", ms_data.custom_saved_speed);
+            pspDebugScreenPrintf("      Fixed AI Power:    < %.1f >\n\n", ms_data.custom_saved_ai);
+            pspDebugScreenPrintf("      Left/Right to adjust, X to Start!\n");
+            pspDebugScreenPrintf("      Press Triangle to Return\n");
         }
         else if (current_state == STATE_STATS) {
-            pspDebugScreenSetXY(12, 4);
-            pspDebugScreenPrintf("=== MEMORY STICK FILE VIEW ===");
-            pspDebugScreenSetXY(10, 7);
-            pspDebugScreenPrintf("Path: ms0:/PSP/GAME/PONG/scores.properties");
-            pspDebugScreenSetXY(10, 10);
-            pspDebugScreenPrintf("ultra.easy.wins=%d", ms_data.wins_ultra);
-            pspDebugScreenSetXY(10, 12);
-            pspDebugScreenPrintf("ultra.easy.losses=%d", ms_data.losses_ultra);
-            pspDebugScreenSetXY(10, 14);
-            pspDebugScreenPrintf("easy.losses=%d (Wins not saved)", ms_data.losses_easy);
-            pspDebugScreenSetXY(10, 16);
-            pspDebugScreenPrintf("medium.wins=%d | medium.losses=%d", ms_data.wins_medium, ms_data.losses_medium);
-            pspDebugScreenSetXY(10, 18);
-            pspDebugScreenPrintf("hard.wins=%d (Losses not saved)", ms_data.wins_hard);
-            pspDebugScreenSetXY(10, 20);
-            pspDebugScreenPrintf("custom.wins=%d | custom.losses=%d", ms_data.wins_custom, ms_data.losses_custom);
-            pspDebugScreenSetXY(12, 24);
-            pspDebugScreenPrintf("Press [X] or [Y] to Go Back");
+            pspDebugScreenPrintf("\n      === MEMORY STICK FILE VIEW ===\n\n");
+            pspDebugScreenPrintf("      Path: ms0:/PSP/GAME/PONG/scores.properties\n\n");
+            pspDebugScreenPrintf("      ultra.easy.wins=%d\n", ms_data.wins_ultra);
+            pspDebugScreenPrintf("      ultra.easy.losses=%d\n", ms_data.losses_ultra);
+            pspDebugScreenPrintf("      easy.losses=%d (Wins not saved)\n", ms_data.losses_easy);
+            pspDebugScreenPrintf("      medium.wins=%d | medium.losses=%d\n", ms_data.wins_medium, ms_data.losses_medium);
+            pspDebugScreenPrintf("      hard.wins=%d (Losses not saved)\n", ms_data.wins_hard);
+            pspDebugScreenPrintf("      custom.wins=%d | custom.losses=%d\n\n", ms_data.wins_custom, ms_data.losses_custom);
+            pspDebugScreenPrintf("      Press [X] or [Y] to Go Back\n");
         }
         else if (current_state == STATE_PLAYING) {
-            pspDebugScreenSetXY(30, 2);
-            pspDebugScreenPrintf("PLAYER: %d  |  AI: %d", player_score, ai_score);
-            
-            // Big Center Score Numbers
-            pspDebugScreenSetXY(27, 8);
-            pspDebugScreenPrintf("  %d   :   %d  ", player_score, ai_score);
+            pspDebugScreenPrintf(" PLAYER: %d  |  AI: %d  (Target: %d)\n", player_score, ai_score, score_limit);
+            pspDebugScreenPrintf(" ----------------------------------------------------\n");
+            for (int r = 2; r < 32; r++) {
+                int p_active = (r >= (int)player_y && r <= (int)(player_y + paddle_height));
+                int a_active = (r >= (int)ai_y && r <= (int)(ai_y + paddle_height));
+                int b_active = ((int)ball_y == r);
 
-            pspDebugScreenSetXY(38, 32);
-            pspDebugScreenPrintf("SELECT FOR MENU");
+                if (p_active && b_active) pspDebugScreenPrintf(" #                     O                             #\n");
+                else if (p_active && a_active) pspDebugScreenPrintf(" #                                                   #\n");
+                else if (p_active) pspDebugScreenPrintf(" #                                                   \n");
+                else if (a_active) pspDebugScreenPrintf("                                                   #\n");
+                else if (b_active) pspDebugScreenPrintf("                       O                             \n");
+                else pspDebugScreenPrintf("\n");
+            }
+            pspDebugScreenPrintf(" SELECT FOR MENU\n");
         }
         else if (current_state == STATE_GAMEOVER) {
-            pspDebugScreenSetXY(15, 10);
-            pspDebugScreenPrintf("==================================");
-            pspDebugScreenSetXY(15, 12);
-            pspDebugScreenPrintf("          GAME OVER !             ");
-            pspDebugScreenSetXY(15, 14);
-            pspDebugScreenPrintf("    WINNER: %s                    ", player_score > ai_score ? "PLAYER" : "AI BOT");
-            pspDebugScreenSetXY(15, 16);
-            pspDebugScreenPrintf("  scores.properties Updated!      ");
-            pspDebugScreenSetXY(15, 18);
-            pspDebugScreenPrintf("==================================");
-            pspDebugScreenSetXY(15, 22);
-            pspDebugScreenPrintf("Press X to return to Main Menu");
+            pspDebugScreenPrintf("\n\n      ==================================\n");
+            pspDebugScreenPrintf("          GAME OVER !             \n");
+            pspDebugScreenPrintf("      WINNER: %s                    \n", player_score > ai_score ? "PLAYER" : "AI BOT");
+            pspDebugScreenPrintf("      scores.properties Updated!      \n");
+            pspDebugScreenPrintf("      ==================================\n\n");
+            pspDebugScreenPrintf("      Press X to return to Main Menu\n");
         }
 
-        sceGuFinish();
-        sceGuSync(0, 0);
-
         sceDisplayWaitVblankStart();
-        sceGuSwapBuffers();
+        sceKernelDelayThread(30000); // Stabil kare hızı
     }
 
-    sceGuTerm();
     return 0;
 }
