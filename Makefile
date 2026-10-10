@@ -1,5 +1,5 @@
 TARGET = kgamer_pong
-OBJS = main.c
+OBJS = main-2.0.c
 
 CFLAGS = -O2 -G0 -Wall
 CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti
