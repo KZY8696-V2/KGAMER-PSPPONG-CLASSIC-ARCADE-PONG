@@ -2,7 +2,7 @@
 #include <pspdebug.h>
 #include <pspdisplay.h>
 #include <pspctrl.h>
-#include <iofilemgr.h>
+#include <pspiofilemgr.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -340,7 +340,6 @@ int main(void) {
         int just_triangle = (pad.Buttons & PSP_CTRL_TRIANGLE) && !(old_pad.Buttons & PSP_CTRL_TRIANGLE);
         int just_square = (pad.Buttons & PSP_CTRL_SQUARE) && !(old_pad.Buttons & PSP_CTRL_SQUARE);
 
-        // --- MAIN MENU ---
         if (current_state == STATE_MENU) {
             if ((pad.Buttons & PSP_CTRL_UP) && !(old_pad.Buttons & PSP_CTRL_UP)) {
                 menu_selection--; if (menu_selection < 0) menu_selection = 4;
@@ -357,7 +356,6 @@ int main(void) {
                 else sceKernelExitGame();
             }
         }
-        // --- DIFFICULTY SELECT ---
         else if (current_state == STATE_DIFFICULTY) {
             if ((pad.Buttons & PSP_CTRL_UP) && !(old_pad.Buttons & PSP_CTRL_UP)) {
                 diff_selection--; if (diff_selection < 0) diff_selection = 4;
@@ -373,7 +371,6 @@ int main(void) {
             }
             if (just_triangle) current_state = STATE_MENU;
         }
-        // --- CUSTOM CONFIG ---
         else if (current_state == STATE_CUSTOM_CONFIG) {
             if ((pad.Buttons & PSP_CTRL_RIGHT) && !(old_pad.Buttons & PSP_CTRL_RIGHT)) {
                 ms_data.custom_saved_limit += 1; ms_data.custom_saved_speed += 0.2f; ms_data.custom_saved_ai += 0.5f;
@@ -390,7 +387,6 @@ int main(void) {
             }
             if (just_triangle) current_state = STATE_DIFFICULTY;
         }
-        // --- CUSTOM SCORES SEARCH ---
         else if (current_state == STATE_CUSTOM_SEARCH) {
             if ((pad.Buttons & PSP_CTRL_RIGHT) && !(old_pad.Buttons & PSP_CTRL_RIGHT)) { search_limit++; search_custom_scores(); }
             if ((pad.Buttons & PSP_CTRL_LEFT) && !(old_pad.Buttons & PSP_CTRL_LEFT)) { if (search_limit > 1) search_limit--; search_custom_scores(); }
@@ -404,7 +400,6 @@ int main(void) {
             }
             if (just_triangle || just_cross) current_state = STATE_MENU;
         }
-        // --- HISTORY MENU ---
         else if (current_state == STATE_HISTORY) {
             if (ms_data.history_count > 0) {
                 if ((pad.Buttons & PSP_CTRL_UP) && !(old_pad.Buttons & PSP_CTRL_UP)) {
@@ -420,11 +415,9 @@ int main(void) {
             }
             if (just_triangle || just_cross) current_state = STATE_MENU;
         }
-        // --- STATS SCREEN ---
         else if (current_state == STATE_STATS) {
             if (just_triangle || just_cross) current_state = STATE_MENU;
         }
-        // --- PLAYING ---
         else if (current_state == STATE_PLAYING) {
             if (pad.Buttons & PSP_CTRL_UP || pad.Ly < 100) player_y -= 1.2f;
             if (pad.Buttons & PSP_CTRL_DOWN || pad.Ly > 150) player_y += 1.2f;
@@ -478,14 +471,12 @@ int main(void) {
 
             if (pad.Buttons & PSP_CTRL_SELECT) current_state = STATE_MENU;
         }
-        // --- GAME OVER ---
         else if (current_state == STATE_GAMEOVER) {
             if (just_cross || just_triangle) current_state = STATE_MENU;
         }
 
         old_pad = pad;
 
-        // --- RENDERING (ENGLISH UI) ---
         pspDebugScreenClear();
         pspDebugScreenSetXY(0, 0);
 
