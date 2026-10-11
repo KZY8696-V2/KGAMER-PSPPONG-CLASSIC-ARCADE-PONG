@@ -43,4 +43,4 @@ A custom, open-source 2D **Pong** arcade game compiled natively for the **PlaySt
 3. Open your Memory Stick directory and navigate to `PSP/GAME/`.
 4. Copy `EBOOT.PBP` directly into your game folder inside `PSP/GAME/`:
    ```text
-   PSP/GAME/
+   PSP/GAME/EXAPLW
